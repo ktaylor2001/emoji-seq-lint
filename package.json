@@ -1,0 +1,21 @@
+{
+  "name": "emoji-seq-lint",
+  "version": "0.1.0",
+  "description": "Lints text for malformed emoji sequences and reports line numbers.",
+  "type": "module",
+  "main": "dist/linter.js",
+  "types": "dist/linter.d.ts",
+  "bin": {
+    "emoji-seq-lint": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

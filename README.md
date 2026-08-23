@@ -21,6 +21,8 @@ It currently checks for:
 - `dangling-zwj` — a zero-width joiner with no emoji before or after it
 - `lone-regional-indicator` — a flag letter with no matching second letter
 - `stray-skin-tone` — a skin-tone modifier not attached to an emoji base
+- `stray-variation-selector` — a VS15/VS16 variation selector not attached
+  to a symbol that has a text/emoji presentation to select between
 
 ## Usage
 

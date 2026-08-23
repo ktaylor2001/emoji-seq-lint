@@ -6,6 +6,7 @@ import {
   isEmojiCodepoint,
   isRegionalIndicator,
   isSkinToneModifier,
+  isVariationSelector,
 } from "./rules.js";
 
 export interface Finding {
@@ -22,6 +23,20 @@ function toCodepoints(text: string): number[] {
   return Array.from(text, (ch) => ch.codePointAt(0) ?? 0);
 }
 
+// A variation selector attaches to the base immediately before it, so a
+// sequence like "base VS16 ZWJ base2" (e.g. the rainbow flag) has the ZWJ's
+// real predecessor one codepoint further back than usual. Looking through a
+// single selector here keeps that pattern from being misread as a dangling
+// join.
+function baseBefore(codepoints: number[], index: number): number | undefined {
+  if (index <= 0) return undefined;
+  const cp = codepoints[index - 1];
+  if (isVariationSelector(cp) && index - 1 > 0) {
+    return codepoints[index - 2];
+  }
+  return cp;
+}
+
 export function lintLine(text: string, lineNumber: number): Finding[] {
   const codepoints = toCodepoints(text);
   const findings: Finding[] = [];
@@ -32,7 +47,8 @@ export function lintLine(text: string, lineNumber: number): Finding[] {
     const next = i + 1 < codepoints.length ? codepoints[i + 1] : undefined;
 
     if (cp === ZWJ) {
-      if (prev === undefined || !isEmojiCodepoint(prev)) {
+      const prevBase = baseBefore(codepoints, i);
+      if (prevBase === undefined || !isEmojiCodepoint(prevBase)) {
         findings.push({
           line: lineNumber,
           column: i + 1,
@@ -69,6 +85,20 @@ export function lintLine(text: string, lineNumber: number): Finding[] {
           column: i + 1,
           rule: "stray-skin-tone",
           message: "skin tone modifier does not follow an emoji base",
+        });
+      }
+    }
+
+    if (isVariationSelector(cp)) {
+      if (prev === undefined || !isEmojiCodepoint(prev)) {
+        findings.push({
+          line: lineNumber,
+          column: i + 1,
+          rule: "stray-variation-selector",
+          message:
+            cp === VS16_EMOJI
+              ? "emoji variation selector does not follow a symbol that supports it"
+              : "text variation selector does not follow a symbol that supports it",
         });
       }
     }

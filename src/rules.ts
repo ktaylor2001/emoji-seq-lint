@@ -38,3 +38,7 @@ export function isRegionalIndicator(cp: number): boolean {
 export function isSkinToneModifier(cp: number): boolean {
   return cp >= SKIN_TONE_START && cp <= SKIN_TONE_END;
 }
+
+export function isVariationSelector(cp: number): boolean {
+  return cp === VS15_TEXT || cp === VS16_EMOJI;
+}

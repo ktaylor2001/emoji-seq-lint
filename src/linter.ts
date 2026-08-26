@@ -65,17 +65,29 @@ export function lintLine(text: string, lineNumber: number): Finding[] {
       }
     }
 
-    if (isRegionalIndicator(cp)) {
-      const pairedWithNext = next !== undefined && isRegionalIndicator(next);
-      const pairedWithPrev = prev !== undefined && isRegionalIndicator(prev);
-      if (!pairedWithNext && !pairedWithPrev) {
+    // Flags are formed by pairing regional indicators two at a time, left
+    // to right, within an unbroken run. A run of three pairs the first two
+    // into a flag and leaves the third dangling; a run of five leaves the
+    // fifth dangling; even-length runs pair off completely. Checking each
+    // indicator only against its immediate neighbor (as opposed to the
+    // whole run) would wrongly clear every indicator in an odd run, since
+    // each one but the last has a same-run neighbor on one side or the
+    // other.
+    if (isRegionalIndicator(cp) && (prev === undefined || !isRegionalIndicator(prev))) {
+      let runEnd = i;
+      while (runEnd + 1 < codepoints.length && isRegionalIndicator(codepoints[runEnd + 1])) {
+        runEnd++;
+      }
+      const runLength = runEnd - i + 1;
+      if (runLength % 2 === 1) {
         findings.push({
           line: lineNumber,
-          column: i + 1,
+          column: runEnd + 1,
           rule: "lone-regional-indicator",
           message: "regional indicator is not paired to form a flag sequence",
         });
       }
+      i = runEnd;
     }
 
     if (isSkinToneModifier(cp)) {

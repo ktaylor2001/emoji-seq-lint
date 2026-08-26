@@ -75,9 +75,12 @@ a multi-gigabyte export costs the same memory as linting a one-line file.
 The emoji-codepoint ranges in `src/rules.ts` are a hand-picked subset of
 the Unicode emoji blocks, not the full emoji-data.txt property table, so a
 handful of legitimate emoji outside those ranges won't be recognized as
-emoji. Three or more regional indicators in a row are not currently
-flagged even though they're ambiguous (should they pair as one flag plus
-one lone letter, or something else) — see the roadmap.
+emoji.
+
+A run of regional indicators is paired off two at a time, left to right,
+the same way flag rendering does. An odd-length run (three, five, ...)
+reports the trailing unpaired indicator as `lone-regional-indicator`,
+since the ones before it did pair up into a real flag.
 
 ## License
 

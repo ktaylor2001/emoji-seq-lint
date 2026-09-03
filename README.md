@@ -63,6 +63,18 @@ chat-export.txt:3:14: lone-regional-indicator: regional indicator is not paired 
 The process exits with status 1 if any findings were reported, 0 otherwise,
 so it can be used as a CI check.
 
+## Tests
+
+```sh
+npm test
+```
+
+Runs `node --test` over the compiled output, using Node's built-in test
+runner (no test framework dependency). `src/linter.test.ts` covers each
+rule with one known-good sequence and one known-bad one, plus a streaming
+test that checks findings land on the right line number across a
+multi-line input.
+
 ## Streaming
 
 Input is read one line at a time through `readline` over a stream (see

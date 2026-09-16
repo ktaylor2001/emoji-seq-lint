@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Readable } from "node:stream";
-import { lintLine, lintStream } from "./linter.js";
+import { fixLine, fixStream, lintLine, lintStream } from "./linter.js";
 
 // Grouping notes: each rule gets one known-good sequence (should produce no
 // findings) and at least one known-bad sequence (should produce exactly the
@@ -123,6 +123,72 @@ test("stray-variation-selector: text selector not attached to a symbol", () => {
       message: "text variation selector does not follow a symbol that supports it",
     },
   ]);
+});
+
+test("fixLine leaves a clean line untouched", () => {
+  const result = fixLine("all good here \u{1F44D}", 1);
+  assert.deepEqual(result, { text: "all good here \u{1F44D}", findings: [] });
+});
+
+test("fixLine strips a dangling ZWJ and reports why", () => {
+  const result = fixLine("\u{1F44D}‍", 4);
+  assert.equal(result.text, "\u{1F44D}");
+  assert.equal(result.findings.length, 1);
+  assert.equal(result.findings[0].rule, "dangling-zwj");
+});
+
+test("fixLine strips only the trailing indicator of an odd run", () => {
+  const run = "\u{1F1FA}\u{1F1F8}\u{1F1EC}"; // U, S, G
+  const result = fixLine(run, 6);
+  assert.equal(result.text, "\u{1F1FA}\u{1F1F8}"); // the paired flag survives
+  assert.equal(result.findings.length, 1);
+  assert.equal(result.findings[0].rule, "lone-regional-indicator");
+});
+
+test("fixLine strips a stray skin tone modifier", () => {
+  const result = fixLine("a\u{1F3FD}", 7);
+  assert.equal(result.text, "a");
+  assert.equal(result.findings.length, 1);
+  assert.equal(result.findings[0].rule, "stray-skin-tone");
+});
+
+test("fixLine strips a stray variation selector", () => {
+  const result = fixLine("a️", 8);
+  assert.equal(result.text, "a");
+  assert.equal(result.findings.length, 1);
+  assert.equal(result.findings[0].rule, "stray-variation-selector");
+});
+
+test("fixLine can strip multiple unrelated problems from one line", () => {
+  const result = fixLine("a‍ b\u{1F3FD}", 9);
+  assert.equal(result.text, "a b");
+  assert.equal(result.findings.length, 2);
+});
+
+test("fixStream fixes each line independently and reports findings per line", async () => {
+  const input = Readable.from([
+    "all good here \u{1F44D}\n",
+    "\u{1F468}‍\u{1F469}‍\u{1F467}‍\n", // family cut off mid-sequence
+    "not a flag: \u{1F1FA} hello\n",
+  ]);
+
+  const fixed = [];
+  for await (const line of fixStream(input)) {
+    fixed.push(line);
+  }
+
+  assert.deepEqual(
+    fixed.map((f) => f.text),
+    [
+      "all good here \u{1F44D}",
+      "\u{1F468}‍\u{1F469}‍\u{1F467}",
+      "not a flag:  hello",
+    ],
+  );
+  assert.deepEqual(
+    fixed.map((f) => f.findings.map((finding) => finding.rule)),
+    [[], ["dangling-zwj"], ["lone-regional-indicator"]],
+  );
 });
 
 test("lintStream reports the correct line number for each finding across multiple lines", async () => {

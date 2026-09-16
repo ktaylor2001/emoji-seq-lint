@@ -63,6 +63,28 @@ chat-export.txt:3:14: lone-regional-indicator: regional indicator is not paired 
 The process exits with status 1 if any findings were reported, 0 otherwise,
 so it can be used as a CI check.
 
+### Fixing
+
+`--fix` strips the offending codepoint for each finding — the dangling ZWJ,
+the unpaired trailing regional indicator, the stray skin-tone modifier, the
+stray variation selector — and writes the corrected text to stdout, line by
+line, without ever buffering the whole file:
+
+```sh
+node dist/cli.js --fix chat-export.txt > chat-export.fixed.txt
+```
+
+Findings are still reported, on stderr, so they don't interleave with the
+fixed text on stdout:
+
+```
+chat-export.txt:2:8: dangling-zwj: zero-width joiner is not followed by an emoji
+```
+
+The fix is a deletion, never a guess at what the sequence should have been;
+a family emoji truncated mid-join loses its dangling joiner and nothing
+else, it doesn't get the missing member invented for it.
+
 ## Tests
 
 ```sh
@@ -71,9 +93,10 @@ npm test
 
 Runs `node --test` over the compiled output, using Node's built-in test
 runner (no test framework dependency). `src/linter.test.ts` covers each
-rule with one known-good sequence and one known-bad one, plus a streaming
-test that checks findings land on the right line number across a
-multi-line input.
+rule with one known-good sequence and one known-bad one, `--fix` stripping
+the right codepoint for each rule, and a streaming test for each of
+`lintStream` and `fixStream` that checks output lands on the right line
+across a multi-line input.
 
 ## Streaming
 

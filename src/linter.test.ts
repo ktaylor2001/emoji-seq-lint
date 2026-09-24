@@ -33,6 +33,17 @@ test("a symbol with a text variation selector produces no findings", () => {
   assert.deepEqual(lintLine(textSmiley, 1), []);
 });
 
+test("a fully-qualified keycap sequence produces no findings", () => {
+  // digit one, VS16, combining enclosing keycap: 1️⃣
+  const keycapOne = "1\u{fe0f}\u{20e3}";
+  assert.deepEqual(lintLine(keycapOne, 1), []);
+});
+
+test("a minimally-qualified keycap sequence (no VS16) produces no findings", () => {
+  const keycapHash = "#\u{20e3}";
+  assert.deepEqual(lintLine(keycapHash, 1), []);
+});
+
 test("a variation-selector base followed by ZWJ and another emoji produces no findings", () => {
   // rainbow flag: white flag, VS16, ZWJ, rainbow. The ZWJ's real
   // predecessor is the flag, one codepoint behind the variation selector.
@@ -125,6 +136,18 @@ test("stray-variation-selector: text selector not attached to a symbol", () => {
   ]);
 });
 
+test("stray-keycap: combining enclosing keycap not attached to a keycap base", () => {
+  const findings = lintLine("a\u{20e3}", 10);
+  assert.deepEqual(findings, [
+    {
+      line: 10,
+      column: 2,
+      rule: "stray-keycap",
+      message: "combining enclosing keycap does not follow a keycap base (digit, #, or *)",
+    },
+  ]);
+});
+
 test("fixLine leaves a clean line untouched", () => {
   const result = fixLine("all good here \u{1F44D}", 1);
   assert.deepEqual(result, { text: "all good here \u{1F44D}", findings: [] });
@@ -157,6 +180,13 @@ test("fixLine strips a stray variation selector", () => {
   assert.equal(result.text, "a");
   assert.equal(result.findings.length, 1);
   assert.equal(result.findings[0].rule, "stray-variation-selector");
+});
+
+test("fixLine strips a stray keycap", () => {
+  const result = fixLine("a\u{20e3}", 10);
+  assert.equal(result.text, "a");
+  assert.equal(result.findings.length, 1);
+  assert.equal(result.findings[0].rule, "stray-keycap");
 });
 
 test("fixLine can strip multiple unrelated problems from one line", () => {

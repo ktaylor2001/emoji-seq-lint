@@ -15,6 +15,8 @@ export const REGIONAL_INDICATOR_END = 0x1f1ff;
 export const SKIN_TONE_START = 0x1f3fb;
 export const SKIN_TONE_END = 0x1f3ff;
 
+export const KEYCAP_COMBINING = 0x20e3;
+
 const EMOJI_BLOCKS: ReadonlyArray<readonly [number, number]> = [
   [0x2300, 0x23ff], // misc technical (hourglass, watch, alarm clock, ...)
   [0x2600, 0x26ff], // misc symbols
@@ -41,4 +43,13 @@ export function isSkinToneModifier(cp: number): boolean {
 
 export function isVariationSelector(cp: number): boolean {
   return cp === VS15_TEXT || cp === VS16_EMOJI;
+}
+
+// Keycap sequences (0️⃣, #️⃣, *️⃣, ...) put an emoji presentation on plain
+// ASCII digits and two punctuation marks by joining them with a combining
+// enclosing keycap. Those bases aren't pictographic and don't belong in
+// EMOJI_BLOCKS, but they're the only valid anchor for U+20E3 and a valid
+// alternate anchor for VS16, so they get their own check.
+export function isKeycapBase(cp: number): boolean {
+  return (cp >= 0x30 && cp <= 0x39) || cp === 0x23 || cp === 0x2a;
 }

@@ -3,7 +3,9 @@ import type { Readable } from "node:stream";
 import {
   ZWJ,
   VS16_EMOJI,
+  KEYCAP_COMBINING,
   isEmojiCodepoint,
+  isKeycapBase,
   isRegionalIndicator,
   isSkinToneModifier,
   isVariationSelector,
@@ -102,7 +104,7 @@ export function lintLine(text: string, lineNumber: number): Finding[] {
     }
 
     if (isVariationSelector(cp)) {
-      if (prev === undefined || !isEmojiCodepoint(prev)) {
+      if (prev === undefined || !(isEmojiCodepoint(prev) || isKeycapBase(prev))) {
         findings.push({
           line: lineNumber,
           column: i + 1,
@@ -111,6 +113,21 @@ export function lintLine(text: string, lineNumber: number): Finding[] {
             cp === VS16_EMOJI
               ? "emoji variation selector does not follow a symbol that supports it"
               : "text variation selector does not follow a symbol that supports it",
+        });
+      }
+    }
+
+    // The base can be a bare digit/#/* or that same base with a VS16 in
+    // between (the fully-qualified form); baseBefore already knows how to
+    // look through a single variation selector to find it.
+    if (cp === KEYCAP_COMBINING) {
+      const base = baseBefore(codepoints, i);
+      if (base === undefined || !isKeycapBase(base)) {
+        findings.push({
+          line: lineNumber,
+          column: i + 1,
+          rule: "stray-keycap",
+          message: "combining enclosing keycap does not follow a keycap base (digit, #, or *)",
         });
       }
     }
@@ -141,9 +158,9 @@ export interface FixedLine {
 // Every rule's reported column is the offending codepoint's own position,
 // not a neighbor's: the ZWJ itself for dangling-zwj, the trailing indicator
 // of an odd run for lone-regional-indicator, the modifier for
-// stray-skin-tone, the selector for stray-variation-selector. That makes
-// the fix uniform across rules: drop the codepoint at each finding's
-// column and leave everything else untouched.
+// stray-skin-tone, the selector for stray-variation-selector, the keycap
+// for stray-keycap. That makes the fix uniform across rules: drop the
+// codepoint at each finding's column and leave everything else untouched.
 export function fixLine(text: string, lineNumber: number): FixedLine {
   const findings = lintLine(text, lineNumber);
   if (findings.length === 0) {

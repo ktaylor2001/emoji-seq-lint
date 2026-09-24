@@ -23,6 +23,8 @@ It currently checks for:
 - `stray-skin-tone` — a skin-tone modifier not attached to an emoji base
 - `stray-variation-selector` — a VS15/VS16 variation selector not attached
   to a symbol that has a text/emoji presentation to select between
+- `stray-keycap` — a combining enclosing keycap (U+20E3) not attached to a
+  keycap base (a digit, `#`, or `*`), as in the `1️⃣` sequence
 
 ## Usage
 
